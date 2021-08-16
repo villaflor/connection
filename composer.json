@@ -1,0 +1,33 @@
+{
+    "name": "villaflor/connection",
+    "description": "API connection",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Villaflor\\Connection\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "classmap": [
+            "tests/"
+        ]
+    },
+    "authors": [
+        {
+            "name": "Mark Anthony Villaflor",
+            "email": "villaflor@live.com"
+        }
+    ],
+    "minimum-stability": "stable",
+    "require-dev": {
+        "phpunit/phpunit": "^9.5",
+        "phpmd/phpmd": "@stable",
+        "friendsofphp/php-cs-fixer": "^3.0"
+    },
+    "require": {
+        "php": "^7.4|^8.0",
+        "guzzlehttp/guzzle": "^7.3",
+        "ext-json": "*"
+    }
+}
