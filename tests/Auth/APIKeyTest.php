@@ -2,9 +2,10 @@
 
 namespace Auth;
 
+use PHPUnit\Framework\TestCase;
 use Villaflor\Connection\Auth\APIKey;
 
-class APIKeyTest extends \PHPUnit\Framework\TestCase
+class APIKeyTest extends TestCase
 {
     public function testGetHeaders()
     {

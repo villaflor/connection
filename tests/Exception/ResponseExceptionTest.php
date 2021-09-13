@@ -5,13 +5,14 @@ namespace Exception;
 use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
+use PHPUnit\Framework\TestCase;
 use Villaflor\Connection\Exception\JSONException;
 use Villaflor\Connection\Exception\ResponseException;
 
 /**
  * @SuppressWarnings(PHPMD.StaticAccess)
  */
-class ResponseExceptionTest extends \PHPUnit\Framework\TestCase
+class ResponseExceptionTest extends TestCase
 {
     public function testFromRequestExceptionNoResponse()
     {

@@ -2,6 +2,8 @@
 
 namespace Villaflor\Connection\Exception;
 
-class ConfigurationsException extends \Exception
+use Exception;
+
+class ConfigurationsException extends Exception
 {
 }
