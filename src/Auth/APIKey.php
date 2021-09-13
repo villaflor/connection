@@ -16,7 +16,7 @@ class APIKey implements AuthInterface
     public function getHeaders(): array
     {
         return [
-            'X-Auth-Email'   => $this->email,
+            'X-Auth-Email' => $this->email,
             'X-Auth-Key' => $this->apiKey
         ];
     }

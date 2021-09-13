@@ -2,6 +2,8 @@
 
 namespace Villaflor\Connection\Exception;
 
-class EndpointException extends \Exception
+use Exception;
+
+class EndpointException extends Exception
 {
 }

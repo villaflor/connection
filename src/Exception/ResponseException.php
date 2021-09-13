@@ -2,9 +2,10 @@
 
 namespace Villaflor\Connection\Exception;
 
+use Exception;
 use GuzzleHttp\Exception\RequestException;
 
-class ResponseException extends \Exception
+class ResponseException extends Exception
 {
     public static function fromRequestException(RequestException $err): self
     {

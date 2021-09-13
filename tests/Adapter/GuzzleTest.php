@@ -2,11 +2,12 @@
 
 namespace Adapter;
 
+use PHPUnit\Framework\TestCase;
 use Villaflor\Connection\Adapter\Guzzle;
 use Villaflor\Connection\Auth\AuthInterface;
 use Villaflor\Connection\Exception\ResponseException;
 
-class GuzzleTest extends \PHPUnit\Framework\TestCase
+class GuzzleTest extends TestCase
 {
     public function setUp(): void
     {
