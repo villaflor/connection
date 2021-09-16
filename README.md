@@ -13,3 +13,14 @@
     <img src="https://img.shields.io/packagist/v/villaflor/connection">
   </a>
 </p>
+
+# Send requests to any API endpoint with ease.
+
+---
+
+**SOLID pattern was used in its implementation.**
+
+## Installation
+In the root application directory, run this command.
+
+    composer require villaflor/connection
