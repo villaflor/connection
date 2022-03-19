@@ -24,7 +24,7 @@ class ResponseException extends Exception
             }
 
             if (isset($json->errors) && count($json->errors) >= 1) {
-                return new ResponseException($json->errors[0]->message, $json->errors[0]->code, $err);
+                return new ResponseException($json->errors[0]->message, (int)$json->errors[0]->code, $err);
             }
         }
 
