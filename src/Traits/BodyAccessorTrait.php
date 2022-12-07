@@ -4,7 +4,7 @@ namespace Villaflor\Connection\Traits;
 
 trait BodyAccessorTrait
 {
-    private $body;
+    private mixed $body;
 
     public function getBody()
     {
