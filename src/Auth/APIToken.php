@@ -4,7 +4,7 @@ namespace Villaflor\Connection\Auth;
 
 class APIToken implements AuthInterface
 {
-    private $apiToken;
+    private string $apiToken;
 
     public function __construct(string $apiToken)
     {
@@ -14,7 +14,7 @@ class APIToken implements AuthInterface
     public function getHeaders(): array
     {
         return [
-            'Authorization' => 'Bearer ' . $this->apiToken
+            'Authorization' => 'Bearer '.$this->apiToken,
         ];
     }
 }
