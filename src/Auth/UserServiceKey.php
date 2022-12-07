@@ -4,7 +4,7 @@ namespace Villaflor\Connection\Auth;
 
 class UserServiceKey implements AuthInterface
 {
-    private $userServiceKey;
+    private string $userServiceKey;
 
     public function __construct(string $userServiceKey)
     {
