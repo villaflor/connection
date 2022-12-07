@@ -1,33 +1,50 @@
 {
     "name": "villaflor/connection",
-    "description": "API connection",
-    "type": "library",
+    "description": "Send requests to any API endpoint with ease.",
+    "keywords": [
+        "villaflor",
+        "connection"
+    ],
+    "homepage": "https://github.com/villaflor/connection",
     "license": "MIT",
-    "autoload": {
-        "psr-4": {
-            "Villaflor\\Connection\\": "src/"
-        }
-    },
-    "autoload-dev": {
-        "classmap": [
-            "tests/"
-        ]
-    },
     "authors": [
         {
             "name": "Mark Anthony Villaflor",
-            "email": "villaflor@live.com"
+            "email": "villaflor@live.com",
+            "role": "Developer"
         }
     ],
-    "minimum-stability": "stable",
-    "require-dev": {
-        "phpunit/phpunit": "^9.5",
-        "phpmd/phpmd": "@stable",
-        "friendsofphp/php-cs-fixer": "^3.1"
-    },
     "require": {
-        "php": "^7.4|^8.0",
+        "php": "^7.4|^8.0|^8.1",
         "guzzlehttp/guzzle": "^6.5|^7.3",
         "ext-json": "*"
-    }
+    },
+    "require-dev": {
+        "laravel/pint": "^1.2",
+        "pestphp/pest": "^1.20"
+    },
+    "autoload": {
+        "psr-4": {
+            "Villaflor\\Connection\\": "src"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Villaflor\\Connection\\Tests\\": "tests"
+        }
+    },
+    "scripts": {
+        "test": "vendor/bin/pest",
+        "test-coverage": "vendor/bin/pest --coverage",
+        "format": "vendor/bin/pint"
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "phpstan/extension-installer": true,
+            "pestphp/pest-plugin": true
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
 }

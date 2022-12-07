@@ -1,84 +1,69 @@
 <?php
 
-namespace Exception;
-
 use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
-use PHPUnit\Framework\TestCase;
 use Villaflor\Connection\Exception\JSONException;
 use Villaflor\Connection\Exception\ResponseException;
 
-/**
- * @SuppressWarnings(PHPMD.StaticAccess)
- */
-class ResponseExceptionTest extends TestCase
-{
-    public function testFromRequestExceptionNoResponse()
-    {
-        $reqErr = new RequestException('foo', new Request('GET', '/test'));
-        $respErr = ResponseException::fromRequestException($reqErr);
+it('can From Request Exception No Response', function () {
+    $reqErr = new RequestException('foo', new Request('GET', '/test'));
+    $respErr = ResponseException::fromRequestException($reqErr);
 
-        $this->assertInstanceOf(ResponseException::class, $respErr);
-        $this->assertEquals($reqErr->getMessage(), $respErr->getMessage());
-        $this->assertEquals(0, $respErr->getCode());
-        $this->assertEquals($reqErr, $respErr->getPrevious());
-    }
+    $this->assertInstanceOf(ResponseException::class, $respErr);
+    $this->assertEquals($reqErr->getMessage(), $respErr->getMessage());
+    $this->assertEquals(0, $respErr->getCode());
+    $this->assertEquals($reqErr, $respErr->getPrevious());
+});
 
-    public function testFromRequestExceptionEmptyContentType()
-    {
-        $resp = new Response(404);
-        $reqErr = new RequestException('foo', new Request('GET', '/test'), $resp);
-        $respErr = ResponseException::fromRequestException($reqErr);
+it('can From Request Exception Empty Content Type', function () {
+    $resp = new Response(404);
+    $reqErr = new RequestException('foo', new Request('GET', '/test'), $resp);
+    $respErr = ResponseException::fromRequestException($reqErr);
 
-        $this->assertInstanceOf(ResponseException::class, $respErr);
-        $this->assertEquals($reqErr->getMessage(), $respErr->getMessage());
-        $this->assertEquals(0, $respErr->getCode());
-        $this->assertEquals($reqErr, $respErr->getPrevious());
-    }
+    $this->assertInstanceOf(ResponseException::class, $respErr);
+    $this->assertEquals($reqErr->getMessage(), $respErr->getMessage());
+    $this->assertEquals(0, $respErr->getCode());
+    $this->assertEquals($reqErr, $respErr->getPrevious());
+});
 
+it('can From Request Exception Unknown Content Type', function () {
+    $resp = new Response(404, ['Content-Type' => ['application/octet-stream']]);
+    $reqErr = new RequestException('foo', new Request('GET', '/test'), $resp);
+    $respErr = ResponseException::fromRequestException($reqErr);
 
-    public function testFromRequestExceptionUnknownContentType()
-    {
-        $resp = new Response(404, ['Content-Type' => ['application/octet-stream']]);
-        $reqErr = new RequestException('foo', new Request('GET', '/test'), $resp);
-        $respErr = ResponseException::fromRequestException($reqErr);
+    $this->assertInstanceOf(ResponseException::class, $respErr);
+    $this->assertEquals($reqErr->getMessage(), $respErr->getMessage());
+    $this->assertEquals(0, $respErr->getCode());
+    $this->assertEquals($reqErr, $respErr->getPrevious());
+});
 
-        $this->assertInstanceOf(ResponseException::class, $respErr);
-        $this->assertEquals($reqErr->getMessage(), $respErr->getMessage());
-        $this->assertEquals(0, $respErr->getCode());
-        $this->assertEquals($reqErr, $respErr->getPrevious());
-    }
+it('can From Request Exception JSON Decode Error', function () {
+    $resp = new Response(404, ['Content-Type' => ['application/json; charset=utf-8']], '[what]');
+    $reqErr = new RequestException('foo', new Request('GET', '/test'), $resp);
+    $respErr = ResponseException::fromRequestException($reqErr);
 
-    public function testFromRequestExceptionJSONDecodeError()
-    {
-        $resp = new Response(404, ['Content-Type' => ['application/json; charset=utf-8']], '[what]');
-        $reqErr = new RequestException('foo', new Request('GET', '/test'), $resp);
-        $respErr = ResponseException::fromRequestException($reqErr);
+    $this->assertInstanceOf(ResponseException::class, $respErr);
+    $this->assertEquals($reqErr->getMessage(), $respErr->getMessage());
+    $this->assertEquals(0, $respErr->getCode());
+    $this->assertInstanceOf(JSONException::class, $respErr->getPrevious());
+    $this->assertEquals($reqErr, $respErr->getPrevious()->getPrevious());
+});
 
-        $this->assertInstanceOf(ResponseException::class, $respErr);
-        $this->assertEquals($reqErr->getMessage(), $respErr->getMessage());
-        $this->assertEquals(0, $respErr->getCode());
-        $this->assertInstanceOf(JSONException::class, $respErr->getPrevious());
-        $this->assertEquals($reqErr, $respErr->getPrevious()->getPrevious());
-    }
-
-    public function testFromRequestExceptionJSONWithErrors()
-    {
-        $body = '{
+it('can From Request Exception JSON With Errors', function () {
+    $body = '{
           "result": null,
           "success": false,
           "errors": [{"code":1003, "message":"This is an error"}],
           "messages": []
         }';
 
-        $resp = new Response(404, ['Content-Type' => ['application/json; charset=utf-8']], $body);
-        $reqErr = new RequestException('foo', new Request('GET', '/test'), $resp);
-        $respErr = ResponseException::fromRequestException($reqErr);
+    $resp = new Response(404, ['Content-Type' => ['application/json; charset=utf-8']], $body);
+    $reqErr = new RequestException('foo', new Request('GET', '/test'), $resp);
+    $respErr = ResponseException::fromRequestException($reqErr);
 
-        $this->assertInstanceOf(ResponseException::class, $respErr);
-        $this->assertEquals('This is an error', $respErr->getMessage());
-        $this->assertEquals(1003, $respErr->getCode());
-        $this->assertEquals($reqErr, $respErr->getPrevious());
-    }
-}
+    $this->assertInstanceOf(ResponseException::class, $respErr);
+    $this->assertEquals('This is an error', $respErr->getMessage());
+    $this->assertEquals(1003, $respErr->getCode());
+    $this->assertEquals($reqErr, $respErr->getPrevious());
+});
