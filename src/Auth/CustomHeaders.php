@@ -4,7 +4,7 @@ namespace Villaflor\Connection\Auth;
 
 class CustomHeaders implements AuthInterface
 {
-    private $headers;
+    private array $headers;
 
     public function __construct(array $headers)
     {

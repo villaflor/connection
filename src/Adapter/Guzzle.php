@@ -11,7 +11,7 @@ use Villaflor\Connection\Exception\ResponseException;
 
 class Guzzle implements AdapterInterface
 {
-    private $client;
+    private Client $client;
 
     public function __construct(AuthInterface $auth, string $baseURI)
     {
@@ -20,7 +20,7 @@ class Guzzle implements AdapterInterface
         $this->client = new Client([
             'base_uri' => $baseURI,
             'headers' => $headers,
-            'Accept' => 'application/json'
+            'Accept' => 'application/json',
         ]);
     }
 
@@ -54,7 +54,7 @@ class Guzzle implements AdapterInterface
      */
     public function request(string $method, string $uri, array $data = [], array $headers = [])
     {
-        if (!in_array($method, ['get', 'post', 'put', 'patch', 'delete'])) {
+        if (! in_array($method, ['get', 'post', 'put', 'patch', 'delete'])) {
             throw new InvalidArgumentException('Request method must be get, post, put, patch, or delete');
         }
 
