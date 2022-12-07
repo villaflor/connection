@@ -4,8 +4,9 @@ namespace Villaflor\Connection\Auth;
 
 class APIKey implements AuthInterface
 {
-    private $email;
-    private $apiKey;
+    private string $email;
+
+    private string $apiKey;
 
     public function __construct(string $email, string $apiKey)
     {
@@ -17,7 +18,7 @@ class APIKey implements AuthInterface
     {
         return [
             'X-Auth-Email' => $this->email,
-            'X-Auth-Key' => $this->apiKey
+            'X-Auth-Key' => $this->apiKey,
         ];
     }
 }
