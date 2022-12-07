@@ -2,6 +2,12 @@
 
 All notable changes to `connection` will be documented in this file.
 
+## 2.0.0 - 2022-12-07
+
+- added support to PHP8.1
+- removed support to PHP7.4
+- changed automated testing from PHPUnit to PestPHP
+
 ## 1.2.1 - 2022-05-11
 
 - Added support for guzzlehttp/guzzle v6
