@@ -1,0 +1,12 @@
+{
+    "type": "service_account",
+    "project_id": "PROJECT_ID",
+    "private_key_id": "KEY_ID",
+    "private_key": "-----BEGIN RSA PRIVATE KEY-----\nMIIBOQIBAAJAc+Vi9E8W+sy4YL4VtxH2N+VVFuBp7W2CiTNysy9EDuHgBOtcTvaK\nK6kG7QcVfsGAvBvLb5rFuEu/mk8ZAHGOnQIDAQABAkBawonC32kUkVvWzyV8T4Gt\ndlgzaR0rRXZTccniTyKSL/yNpmgQI/tv/q2yBW7djqQaZRmgFAyyM+ZZaDilK+I1\nAiEAu9wmd5c1YO3crHgVaCmcTFI/3PijnkMGtaNkflZvqPsCIQCd7vuu6MlZOerA\nemzcmV5wXopP/pijJ5fjGziqlsBDRwIhAIgzTeRoybeT3OliSsrxWDNxcoHn9uB4\nYfXxF5wNWPlfAiAPpkSuOkbpXoHSfM8YtOHUxKlz78h0MlIsoN/ml3WJtQIgHTlh\nxg+LPirkERmNb1URzy0HdE24CvRSlmew/iONpwk=\n-----END RSA PRIVATE KEY-----",
+    "client_email": "SERVICE_ACCOUNT_EMAIL",
+    "client_id": "CLIENT_ID",
+    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+    "token_uri": "https://accounts.google.com/o/oauth2/token",
+    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+    "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/SERVICE_ACCOUNT_EMAIL"
+}
