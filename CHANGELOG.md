@@ -2,6 +2,10 @@
 
 All notable changes to `connection` will be documented in this file.
 
+## 2.1.0 - 2023-01-06
+
+- added support for Google Service Account auth
+
 ## 2.0.0 - 2022-12-07
 
 - added support to PHP8.1
