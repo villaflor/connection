@@ -16,13 +16,13 @@
     ],
     "require": {
         "php": "^8.0|^8.1",
-        "guzzlehttp/guzzle": "^7.5",
+        "guzzlehttp/guzzle": "^7.8",
         "ext-json": "*",
         "ext-openssl": "*"
     },
     "require-dev": {
-        "laravel/pint": "^1.2",
-        "pestphp/pest": "^1.20"
+        "laravel/pint": "^1.13",
+        "pestphp/pest": "^2.19"
     },
     "autoload": {
         "psr-4": {
