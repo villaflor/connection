@@ -3,7 +3,7 @@
 use Villaflor\Connection\Auth\None;
 
 it('can get Headers', function () {
-    $auth = new None();
+    $auth = new None;
     $headers = $auth->getHeaders();
 
     $this->assertEquals([], $headers);
