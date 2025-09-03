@@ -36,7 +36,7 @@ class GoogleServiceAccount implements AuthInterface
         $this->expiredAt = $this->issuedAt + 3600;
     }
 
-    public function setTokenDuration(int $startTimestamp, int $endTimestamp = null): void
+    public function setTokenDuration(int $startTimestamp, ?int $endTimestamp = null): void
     {
         $this->issuedAt = $startTimestamp;
 
