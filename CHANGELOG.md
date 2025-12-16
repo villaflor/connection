@@ -2,6 +2,12 @@
 
 All notable changes to `connection` will be documented in this file.
 
+## 4.0.0 - 2025-09-03
+
+### What's Changed
+
+- updated PHP version support to ^8.3
+
 ## v3.0.0 - 2023-09-25
 
 - add support to PHP8.1
