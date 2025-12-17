@@ -2,6 +2,47 @@
 
 All notable changes to `connection` will be documented in this file.
 
+## 5.0.0 - 2025-12-17
+
+### What's New
+
+#### 🎯 New Features
+
+**Caching Middleware**
+
+- HTTP response caching with automatic cache key generation
+- Support for `Cache-Control` and `Expires` headers
+- Configurable default TTL and cacheable HTTP methods
+- Only caches successful 2xx responses
+
+**Cookie Middleware**
+
+- Automatic cookie jar management for session persistence
+- Parses `Set-Cookie` headers and stores cookies automatically
+- Adds appropriate `Cookie` headers to requests based on domain and path matching
+- Full support for cookie attributes (domain, path, expires, max-age, secure, httponly)
+
+**Comprehensive Examples**
+Added 10 detailed example files demonstrating:
+
+- Basic usage and HTTP methods
+- Authentication strategies (Bearer, API Key, Custom Headers, Service Accounts)
+- Retry logic and error handling
+- Custom middleware implementation
+- File uploads (single, multiple, multipart)
+- Event system integration
+- Proxy and SSL configuration
+- Advanced architectural patterns
+- Caching strategies
+- Cookie management
+
+#### ⚠️ Breaking Changes
+
+- **Minimum PHP version is now 8.3** (previously 8.2)
+- **`psr/http-message` now requires v2.0+** (previously allowed v1.0)
+  - This ensures proper type hint compatibility across all PHP versions
+  
+
 ## 4.0.0 - 2025-09-03
 
 ### What's Changed
