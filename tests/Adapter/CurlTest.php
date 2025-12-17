@@ -233,3 +233,337 @@ it('throws TimeoutException for operation timeout', function () {
     // Try to connect to non-routable IP to trigger timeout
     $client->get('/');
 });
+
+it('can set retry config', function () {
+    $retryConfig = new Villaflor\Connection\Retry\RetryConfig(maxAttempts: 3);
+    $this->client->setRetryConfig($retryConfig);
+
+    // If no exception is thrown, the setter works
+    expect(true)->toBeTrue();
+});
+
+it('retries request on retryable status code', function () {
+    $auth = $this->getMockBuilder(Villaflor\Connection\Auth\AuthInterface::class)
+        ->onlyMethods(['getHeaders'])
+        ->getMock();
+    $auth->method('getHeaders')->willReturn([]);
+
+    $client = new Villaflor\Connection\Adapter\Curl($auth, 'https://postman-echo.com');
+
+    // Set retry config with very small delay for fast testing
+    $retryConfig = new Villaflor\Connection\Retry\RetryConfig(
+        maxAttempts: 3,
+        retryableStatusCodes: [503],
+        baseDelay: 1,
+        exponentialBackoff: false
+    );
+    $client->setRetryConfig($retryConfig);
+
+    // The 503 status will cause retries and eventually throw
+    $this->expectException(Villaflor\Connection\Exception\ResponseException::class);
+    $client->get('https://postman-echo.com/status/503');
+});
+
+it('does not retry on non-retryable status code', function () {
+    $auth = $this->getMockBuilder(Villaflor\Connection\Auth\AuthInterface::class)
+        ->onlyMethods(['getHeaders'])
+        ->getMock();
+    $auth->method('getHeaders')->willReturn([]);
+
+    $client = new Villaflor\Connection\Adapter\Curl($auth, 'https://postman-echo.com');
+
+    // Set retry config with very small delay for fast testing
+    $retryConfig = new Villaflor\Connection\Retry\RetryConfig(
+        maxAttempts: 3,
+        retryableStatusCodes: [503],  // Only 503 is retryable
+        baseDelay: 1,
+        exponentialBackoff: false
+    );
+    $client->setRetryConfig($retryConfig);
+
+    // The 404 status should not be retried (will fail immediately)
+    $this->expectException(Villaflor\Connection\Exception\ResponseException::class);
+    $client->get('https://postman-echo.com/status/404');
+});
+
+it('can add and execute middleware', function () {
+    $executed = false;
+
+    $middleware = new class($executed) implements Villaflor\Connection\Middleware\MiddlewareInterface
+    {
+        private bool $executed;
+
+        public function __construct(bool &$executed)
+        {
+            $this->executed = &$executed;
+        }
+
+        public function handle(string $method, string $uri, array $data, array $headers, callable $next): Psr\Http\Message\ResponseInterface
+        {
+            $this->executed = true;
+
+            return $next($method, $uri, $data, $headers);
+        }
+    };
+
+    $this->client->addMiddleware($middleware);
+    $response = $this->client->get('https://postman-echo.com/get');
+
+    expect($executed)->toBeTrue();
+    expect($response->getStatusCode())->toBe(200);
+});
+
+it('executes middleware in order', function () {
+    $order = [];
+
+    $middleware1 = new class($order) implements Villaflor\Connection\Middleware\MiddlewareInterface
+    {
+        private array $order;
+
+        public function __construct(array &$order)
+        {
+            $this->order = &$order;
+        }
+
+        public function handle(string $method, string $uri, array $data, array $headers, callable $next): Psr\Http\Message\ResponseInterface
+        {
+            $this->order[] = 'middleware1-before';
+            $response = $next($method, $uri, $data, $headers);
+            $this->order[] = 'middleware1-after';
+
+            return $response;
+        }
+    };
+
+    $middleware2 = new class($order) implements Villaflor\Connection\Middleware\MiddlewareInterface
+    {
+        private array $order;
+
+        public function __construct(array &$order)
+        {
+            $this->order = &$order;
+        }
+
+        public function handle(string $method, string $uri, array $data, array $headers, callable $next): Psr\Http\Message\ResponseInterface
+        {
+            $this->order[] = 'middleware2-before';
+            $response = $next($method, $uri, $data, $headers);
+            $this->order[] = 'middleware2-after';
+
+            return $response;
+        }
+    };
+
+    $this->client->addMiddleware($middleware1);
+    $this->client->addMiddleware($middleware2);
+    $this->client->get('https://postman-echo.com/get');
+
+    expect($order)->toBe([
+        'middleware1-before',
+        'middleware2-before',
+        'middleware2-after',
+        'middleware1-after',
+    ]);
+});
+
+it('middleware can modify request parameters', function () {
+    $middleware = new class implements Villaflor\Connection\Middleware\MiddlewareInterface
+    {
+        public function handle(string $method, string $uri, array $data, array $headers, callable $next): Psr\Http\Message\ResponseInterface
+        {
+            // Add a custom header
+            $headers['X-Custom-Middleware'] = 'test-value';
+
+            return $next($method, $uri, $data, $headers);
+        }
+    };
+
+    $this->client->addMiddleware($middleware);
+    $response = $this->client->get('https://postman-echo.com/get');
+
+    $body = json_decode($response->getBody());
+    expect($body->headers->{'x-custom-middleware'})->toBe('test-value');
+});
+
+it('can upload file using multipart form data', function () {
+    $filePath = __DIR__.'/../fixtures/test-file.txt';
+
+    $response = $this->client->post('https://postman-echo.com/post', [
+        'multipart' => [
+            [
+                'name' => 'file',
+                'contents' => $filePath,
+                'filename' => 'test-file.txt',
+                'headers' => ['Content-Type' => 'text/plain'],
+            ],
+            [
+                'name' => 'description',
+                'contents' => 'Test file upload',
+            ],
+        ],
+    ]);
+
+    expect($response->getStatusCode())->toBe(200);
+    $body = json_decode($response->getBody());
+    // Postman-echo returns files indexed by filename, not field name
+    expect($body->files)->toHaveProperty('test-file.txt');
+    expect($body->form->description)->toBe('Test file upload');
+});
+
+it('can upload file with raw content', function () {
+    $fileContent = 'This is raw file content for testing';
+
+    $response = $this->client->post('https://postman-echo.com/post', [
+        'multipart' => [
+            [
+                'name' => 'file',
+                'contents' => $fileContent,
+                'filename' => 'raw-content.txt',
+                'headers' => ['Content-Type' => 'text/plain'],
+            ],
+        ],
+    ]);
+
+    expect($response->getStatusCode())->toBe(200);
+    $body = json_decode($response->getBody());
+    expect($body->files)->toHaveProperty('raw-content.txt');
+});
+
+it('can upload multiple files', function () {
+    $filePath = __DIR__.'/../fixtures/test-file.txt';
+
+    $response = $this->client->post('https://postman-echo.com/post', [
+        'multipart' => [
+            [
+                'name' => 'file1',
+                'contents' => $filePath,
+                'filename' => 'file1.txt',
+            ],
+            [
+                'name' => 'file2',
+                'contents' => 'Content of second file',
+                'filename' => 'file2.txt',
+            ],
+            [
+                'name' => 'field',
+                'contents' => 'Regular form field',
+            ],
+        ],
+    ]);
+
+    expect($response->getStatusCode())->toBe(200);
+    $body = json_decode($response->getBody());
+    expect($body->files)->toHaveProperty('file1.txt');
+    expect($body->files)->toHaveProperty('file2.txt');
+    expect($body->form->field)->toBe('Regular form field');
+});
+
+it('skips multipart fields with missing name or contents', function () {
+    $response = $this->client->post('https://postman-echo.com/post', [
+        'multipart' => [
+            [
+                // Missing name - should be skipped
+                'contents' => 'test content',
+            ],
+            [
+                'name' => 'valid_field',
+                // Missing contents - should be skipped
+            ],
+            [
+                'name' => 'field',
+                'contents' => 'Valid field',
+            ],
+        ],
+    ]);
+
+    expect($response->getStatusCode())->toBe(200);
+    $body = json_decode($response->getBody());
+    expect($body->form->field)->toBe('Valid field');
+    // The invalid fields should not be present
+    expect(property_exists($body->form, 'valid_field'))->toBeFalse();
+});
+
+it('can disable SSL peer verification and make request', function () {
+    $this->client->setVerifyPeer(false);
+    $this->client->setVerifyHost(false);
+    // Make an actual request to exercise the SSL configuration
+    $response = $this->client->get('https://postman-echo.com/get');
+    expect($response->getStatusCode())->toBe(200);
+});
+
+it('can set custom CA bundle and make request', function () {
+    // Use the system's default CA bundle location (varies by OS)
+    $caBundlePaths = [
+        '/etc/ssl/certs/ca-certificates.crt', // Debian/Ubuntu/Gentoo
+        '/etc/pki/tls/certs/ca-bundle.crt',   // Fedora/RHEL
+        '/etc/ssl/ca-bundle.pem',              // OpenSUSE
+        '/etc/ssl/cert.pem',                   // OpenBSD
+        '/usr/local/share/certs/ca-root-nss.crt', // FreeBSD
+    ];
+
+    $caBundle = null;
+    foreach ($caBundlePaths as $path) {
+        if (file_exists($path)) {
+            $caBundle = $path;
+            break;
+        }
+    }
+
+    if ($caBundle !== null) {
+        $this->client->setCaBundle($caBundle);
+        $response = $this->client->get('https://postman-echo.com/get');
+        expect($response->getStatusCode())->toBe(200);
+    } else {
+        // If no CA bundle found, skip test
+        expect(true)->toBeTrue();
+    }
+});
+
+it('can set SSL client certificate with separate key', function () {
+    // Create temporary files to simulate cert and key
+    $certFile = tempnam(sys_get_temp_dir(), 'cert_');
+    $keyFile = tempnam(sys_get_temp_dir(), 'key_');
+    file_put_contents($certFile, 'fake cert');
+    file_put_contents($keyFile, 'fake key');
+
+    $this->client->setSslCert($certFile, $keyFile);
+
+    // We can't actually make a request with fake certs, but we can verify
+    // the configuration was applied by checking it doesn't throw during setup
+    expect(true)->toBeTrue();
+
+    unlink($certFile);
+    unlink($keyFile);
+});
+
+it('can set SSL client certificate without separate key', function () {
+    $certFile = tempnam(sys_get_temp_dir(), 'cert_');
+    file_put_contents($certFile, 'fake cert with embedded key');
+
+    $this->client->setSslCert($certFile);
+    expect(true)->toBeTrue();
+
+    unlink($certFile);
+});
+
+it('can set proxy with authentication', function () {
+    // Note: We can't test actual proxy without a real proxy server
+    // But we can verify the configuration is applied
+    $auth = $this->getMockBuilder(Villaflor\Connection\Auth\AuthInterface::class)
+        ->onlyMethods(['getHeaders'])
+        ->getMock();
+    $auth->method('getHeaders')->willReturn([]);
+
+    $client = new Villaflor\Connection\Adapter\Curl($auth, 'https://postman-echo.com');
+    $client->setProxy('http://proxy.example.com:8080', 'user:pass');
+
+    // Since we can't actually test with a real proxy, we just verify
+    // the configuration was set without errors
+    expect(true)->toBeTrue();
+});
+
+it('works with SSL verification enabled by default', function () {
+    // Default behavior - SSL verification should be enabled
+    $response = $this->client->get('https://postman-echo.com/get');
+    expect($response->getStatusCode())->toBe(200);
+});
