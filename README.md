@@ -11,13 +11,24 @@ A lightweight, PSR-7 compliant HTTP client for PHP 8.3+ with no dependencies. Se
 
 ## Features
 
+### Core Features
 ✅ **Zero Dependencies** - Native cURL implementation, no Guzzle required
 ✅ **100% Test Coverage** - Fully tested and reliable
 ✅ **PSR-7 Compliant** - Standard HTTP message interfaces
 ✅ **Multiple Auth Methods** - API Token, API Key, Google Service Account, Custom Headers
 ✅ **SOLID Architecture** - Clean, maintainable, extensible code
 ✅ **Type Safe** - Full PHP 8.3+ type hints
-✅ **Configurable** - Timeouts, SSL, redirects, and more
+
+### Advanced Features
+✅ **Middleware Pipeline** - Extensible request/response processing
+✅ **Retry Logic** - Automatic retry with exponential backoff
+✅ **Rate Limiting** - Token bucket algorithm for API rate limits
+✅ **Response Caching** - HTTP-aware caching with TTL support
+✅ **Cookie Management** - Automatic cookie jar with session persistence
+✅ **Event System** - Observable HTTP lifecycle events
+✅ **File Uploads** - Multipart form data support
+✅ **Proxy & SSL** - Full proxy and SSL/TLS configuration
+✅ **PSR-3 Logging** - Request/response logging support
 
 ## Installation
 
@@ -301,6 +312,286 @@ $response = $client->post('/api/form', [
 $response = $client->get('/search?q=test', ['page' => 2]);
 // Requests: /search?q=test&page=2
 ```
+
+## Fluent API with ConnectionBuilder
+
+Build clients with a fluent, chainable API:
+
+```php
+use Villaflor\Connection\ConnectionBuilder;
+
+$client = ConnectionBuilder::create()
+    ->withBaseUri('https://api.example.com')
+    ->withBearerToken('your-token')
+    ->withTimeout(60)
+    ->withConnectTimeout(10)
+    ->build();
+
+// Make requests
+$response = $client->get('/users');
+```
+
+## Advanced Features
+
+### Retry Logic with Exponential Backoff
+
+Automatically retry failed requests with configurable backoff:
+
+```php
+use Villaflor\Connection\Retry\RetryConfig;
+
+$client = new Curl($auth, 'https://api.example.com');
+
+// Configure retry behavior
+$retryConfig = new RetryConfig(
+    maxAttempts: 3,                                      // Retry up to 3 times
+    retryableStatusCodes: [408, 429, 500, 502, 503, 504], // Which status codes to retry
+    exponentialBackoff: true,                            // Use exponential backoff
+    baseDelay: 1000,                                     // Start with 1 second delay
+    maxDelay: 30000                                      // Maximum 30 seconds delay
+);
+
+$client->setRetryConfig($retryConfig);
+
+// Requests will automatically retry on failures
+$response = $client->get('/unstable-endpoint');
+```
+
+Retry delays: 1s → 2s → 4s → 8s → ...
+
+### Middleware Pipeline
+
+Extend functionality with custom middleware:
+
+```php
+use Villaflor\Connection\Middleware\MiddlewareInterface;
+use Psr\Http\Message\ResponseInterface;
+
+class CustomMiddleware implements MiddlewareInterface
+{
+    public function handle(
+        string $method,
+        string $uri,
+        array $data,
+        array $headers,
+        callable $next
+    ): ResponseInterface {
+        // Before request
+        $headers['X-Custom-Header'] = 'value';
+
+        // Execute request
+        $response = $next($method, $uri, $data, $headers);
+
+        // After response
+        return $response;
+    }
+}
+
+$client->addMiddleware(new CustomMiddleware);
+```
+
+### Rate Limiting
+
+Prevent exceeding API rate limits:
+
+```php
+use Villaflor\Connection\RateLimit\RateLimiter;
+use Villaflor\Connection\Middleware\RateLimitMiddleware;
+
+$client = new Curl($auth, 'https://api.example.com');
+
+// Limit to 100 requests per 60 seconds
+$limiter = new RateLimiter(maxRequests: 100, perSeconds: 60);
+$client->addMiddleware(new RateLimitMiddleware($limiter));
+
+// Requests will automatically throttle
+for ($i = 0; $i < 200; $i++) {
+    $client->get('/data'); // Will throttle after 100 requests
+}
+```
+
+### Response Caching
+
+Cache responses to improve performance:
+
+```php
+use Villaflor\Connection\Cache\ArrayCache;
+use Villaflor\Connection\Middleware\CachingMiddleware;
+
+$client = new Curl($auth, 'https://api.example.com');
+
+$cache = new ArrayCache;
+$cachingMiddleware = new CachingMiddleware(
+    cache: $cache,
+    defaultTtl: 300,  // 5 minutes
+    cacheableMethods: ['GET']
+);
+
+$client->addMiddleware($cachingMiddleware);
+
+// First request hits the API
+$response1 = $client->get('/data'); // ~200ms
+
+// Second request uses cache
+$response2 = $client->get('/data'); // <1ms
+```
+
+### Cookie Management
+
+Automatically handle cookies and sessions:
+
+```php
+use Villaflor\Connection\Cookie\CookieJar;
+use Villaflor\Connection\Middleware\CookieMiddleware;
+
+$client = new Curl($auth, 'https://api.example.com');
+
+$jar = new CookieJar;
+$client->addMiddleware(new CookieMiddleware($jar));
+
+// Login request sets cookies
+$client->post('/login', ['username' => 'user', 'password' => 'pass']);
+
+// Subsequent requests automatically include cookies
+$client->get('/dashboard'); // Cookie sent automatically
+$client->get('/profile');   // Cookie sent automatically
+```
+
+### Event System
+
+Monitor and observe HTTP lifecycle:
+
+```php
+use Villaflor\Connection\Events\EventDispatcher;
+use Villaflor\Connection\Middleware\EventMiddleware;
+
+$dispatcher = new EventDispatcher;
+
+// Listen for events
+$dispatcher->listen('request.sending', function ($event) {
+    echo "Sending: {$event->method} {$event->uri}\n";
+});
+
+$dispatcher->listen('response.received', function ($event) {
+    echo "Received: {$event->response->getStatusCode()} in {$event->duration}s\n";
+});
+
+$dispatcher->listen('request.failed', function ($event) {
+    echo "Failed: {$event->exception->getMessage()}\n";
+});
+
+$client->addMiddleware(new EventMiddleware($dispatcher));
+```
+
+### Request/Response Logging
+
+PSR-3 compatible logging:
+
+```php
+use Villaflor\Connection\Middleware\LoggingMiddleware;
+use Psr\Log\LogLevel;
+
+$client = new Curl($auth, 'https://api.example.com');
+
+$client->addMiddleware(new LoggingMiddleware(
+    logger: $logger,           // Any PSR-3 logger
+    requestLevel: LogLevel::INFO,
+    responseLevel: LogLevel::INFO,
+    errorLevel: LogLevel::ERROR
+));
+
+// All requests/responses are logged
+$client->get('/data');
+```
+
+### File Uploads
+
+Upload files with multipart/form-data:
+
+```php
+// Upload from file path
+$client->post('/upload', [
+    'description' => 'My file',
+    'file' => '/path/to/file.pdf',
+]);
+
+// Upload raw content
+$client->post('/upload', [
+    'file' => [
+        'name' => 'document.pdf',
+        'contents' => $fileContent,
+        'mime_type' => 'application/pdf',
+    ],
+]);
+
+// Multiple files
+$client->post('/upload', [
+    'file1' => '/path/to/file1.pdf',
+    'file2' => '/path/to/file2.jpg',
+]);
+```
+
+### Proxy Configuration
+
+Route requests through a proxy:
+
+```php
+$client = new Curl($auth, 'https://api.example.com');
+
+// Basic proxy
+$client->setProxy('proxy.example.com:8080');
+
+// Proxy with authentication
+$client->setProxy('proxy.example.com:8080', 'username:password');
+
+// With ConnectionBuilder
+$client = ConnectionBuilder::create()
+    ->withBaseUri('https://api.example.com')
+    ->withProxy('proxy.example.com:8080', 'user:pass')
+    ->build();
+```
+
+### SSL/TLS Configuration
+
+Configure SSL verification and certificates:
+
+```php
+$client = new Curl($auth, 'https://api.example.com');
+
+// Enable/disable SSL verification
+$client->setVerifyPeer(true);  // Verify SSL certificate
+$client->setVerifyHost(true);  // Verify hostname
+
+// Custom CA bundle
+$client->setCaBundle('/path/to/ca-bundle.crt');
+
+// Client certificates (mutual TLS)
+$client->setSslCert('/path/to/cert.pem', '/path/to/key.pem');
+
+// With ConnectionBuilder
+$client = ConnectionBuilder::create()
+    ->withBaseUri('https://api.example.com')
+    ->withVerifyPeer(true)
+    ->withCaBundle('/path/to/ca-bundle.crt')
+    ->build();
+```
+
+## Examples
+
+Comprehensive examples are available in the [`examples/`](examples/) directory:
+
+1. **01-basic-usage.php** - HTTP methods and basic operations
+2. **02-authentication.php** - All authentication strategies
+3. **03-retry-logic.php** - Retry configuration patterns
+4. **04-middleware.php** - Middleware system
+5. **05-file-uploads.php** - File upload examples
+6. **06-events.php** - Event system usage
+7. **07-proxy-ssl.php** - Proxy and SSL configuration
+8. **08-advanced-patterns.php** - Production patterns
+9. **09-caching.php** - Response caching
+10. **10-cookies.php** - Cookie management
+
+See [`examples/README.md`](examples/README.md) for a complete guide.
 
 ## Migration from Guzzle
 
