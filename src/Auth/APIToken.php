@@ -4,12 +4,12 @@ namespace Villaflor\Connection\Auth;
 
 class APIToken implements AuthInterface
 {
-    private string $apiToken;
-
-    public function __construct(string $apiToken)
-    {
-        $this->apiToken = $apiToken;
-    }
+    /**
+     * Create a new API Token authentication instance.
+     *
+     * @param  string  $apiToken  The API token to use for authentication
+     */
+    public function __construct(private readonly string $apiToken) {}
 
     public function getHeaders(): array
     {
