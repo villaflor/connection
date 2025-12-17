@@ -1,56 +1,44 @@
 <?php
 
-use GuzzleHttp\Exception\RequestException;
-use GuzzleHttp\Psr7\Request;
-use GuzzleHttp\Psr7\Response;
 use Villaflor\Connection\Exception\JSONException;
 use Villaflor\Connection\Exception\ResponseException;
+use Villaflor\Connection\Http\Response;
+use Villaflor\Connection\Http\Stream;
 
-it('can From Request Exception No Response', function () {
-    $reqErr = new RequestException('foo', new Request('GET', '/test'));
-    $respErr = ResponseException::fromRequestException($reqErr);
+it('can create exception from response with empty content type', function () {
+    $resp = new Response(404, [], new Stream(''), 'Not Found');
+    $respErr = ResponseException::fromResponse($resp);
 
-    $this->assertInstanceOf(ResponseException::class, $respErr);
-    $this->assertEquals($reqErr->getMessage(), $respErr->getMessage());
-    $this->assertEquals(0, $respErr->getCode());
-    $this->assertEquals($reqErr, $respErr->getPrevious());
+    expect($respErr)->toBeInstanceOf(ResponseException::class);
+    expect($respErr->getMessage())->toBe('HTTP 404: Not Found');
+    expect($respErr->getCode())->toBe(404);
 });
 
-it('can From Request Exception Empty Content Type', function () {
-    $resp = new Response(404);
-    $reqErr = new RequestException('foo', new Request('GET', '/test'), $resp);
-    $respErr = ResponseException::fromRequestException($reqErr);
+it('can create exception from response with unknown content type', function () {
+    $resp = new Response(404, ['Content-Type' => 'application/octet-stream'], new Stream('binary data'), 'Not Found');
+    $respErr = ResponseException::fromResponse($resp);
 
-    $this->assertInstanceOf(ResponseException::class, $respErr);
-    $this->assertEquals($reqErr->getMessage(), $respErr->getMessage());
-    $this->assertEquals(0, $respErr->getCode());
-    $this->assertEquals($reqErr, $respErr->getPrevious());
+    expect($respErr)->toBeInstanceOf(ResponseException::class);
+    expect($respErr->getMessage())->toBe('HTTP 404: Not Found - binary data');
+    expect($respErr->getCode())->toBe(404);
 });
 
-it('can From Request Exception Unknown Content Type', function () {
-    $resp = new Response(404, ['Content-Type' => ['application/octet-stream']]);
-    $reqErr = new RequestException('foo', new Request('GET', '/test'), $resp);
-    $respErr = ResponseException::fromRequestException($reqErr);
+it('can create exception from response with JSON decode error', function () {
+    $resp = new Response(
+        404,
+        ['Content-Type' => 'application/json; charset=utf-8'],
+        new Stream('[what]'),
+        'Not Found'
+    );
+    $respErr = ResponseException::fromResponse($resp);
 
-    $this->assertInstanceOf(ResponseException::class, $respErr);
-    $this->assertEquals($reqErr->getMessage(), $respErr->getMessage());
-    $this->assertEquals(0, $respErr->getCode());
-    $this->assertEquals($reqErr, $respErr->getPrevious());
+    expect($respErr)->toBeInstanceOf(ResponseException::class);
+    expect($respErr->getMessage())->toContain('JSON decode error');
+    expect($respErr->getCode())->toBe(404);
+    expect($respErr->getPrevious())->toBeInstanceOf(JSONException::class);
 });
 
-it('can From Request Exception JSON Decode Error', function () {
-    $resp = new Response(404, ['Content-Type' => ['application/json; charset=utf-8']], '[what]');
-    $reqErr = new RequestException('foo', new Request('GET', '/test'), $resp);
-    $respErr = ResponseException::fromRequestException($reqErr);
-
-    $this->assertInstanceOf(ResponseException::class, $respErr);
-    $this->assertEquals($reqErr->getMessage(), $respErr->getMessage());
-    $this->assertEquals(0, $respErr->getCode());
-    $this->assertInstanceOf(JSONException::class, $respErr->getPrevious());
-    $this->assertEquals($reqErr, $respErr->getPrevious()->getPrevious());
-});
-
-it('can From Request Exception JSON With Errors', function () {
+it('can create exception from response with JSON errors array', function () {
     $body = '{
           "result": null,
           "success": false,
@@ -58,12 +46,63 @@ it('can From Request Exception JSON With Errors', function () {
           "messages": []
         }';
 
-    $resp = new Response(404, ['Content-Type' => ['application/json; charset=utf-8']], $body);
-    $reqErr = new RequestException('foo', new Request('GET', '/test'), $resp);
-    $respErr = ResponseException::fromRequestException($reqErr);
+    $resp = new Response(
+        404,
+        ['Content-Type' => 'application/json; charset=utf-8'],
+        new Stream($body),
+        'Not Found'
+    );
+    $respErr = ResponseException::fromResponse($resp);
 
-    $this->assertInstanceOf(ResponseException::class, $respErr);
-    $this->assertEquals('This is an error', $respErr->getMessage());
-    $this->assertEquals(1003, $respErr->getCode());
-    $this->assertEquals($reqErr, $respErr->getPrevious());
+    expect($respErr)->toBeInstanceOf(ResponseException::class);
+    expect($respErr->getMessage())->toBe('This is an error');
+    expect($respErr->getCode())->toBe(1003);
+});
+
+it('can create exception from response with JSON message field', function () {
+    $body = '{"message":"Custom error message"}';
+
+    $resp = new Response(
+        400,
+        ['Content-Type' => 'application/json'],
+        new Stream($body),
+        'Bad Request'
+    );
+    $respErr = ResponseException::fromResponse($resp);
+
+    expect($respErr)->toBeInstanceOf(ResponseException::class);
+    expect($respErr->getMessage())->toBe('Custom error message');
+    expect($respErr->getCode())->toBe(400);
+});
+
+it('can create exception from response with JSON error field (string)', function () {
+    $body = '{"error":"Something went wrong"}';
+
+    $resp = new Response(
+        500,
+        ['Content-Type' => 'application/json'],
+        new Stream($body),
+        'Internal Server Error'
+    );
+    $respErr = ResponseException::fromResponse($resp);
+
+    expect($respErr)->toBeInstanceOf(ResponseException::class);
+    expect($respErr->getMessage())->toBe('Something went wrong');
+    expect($respErr->getCode())->toBe(500);
+});
+
+it('can create exception from response with JSON error field (object)', function () {
+    $body = '{"error":{"message":"Detailed error"}}';
+
+    $resp = new Response(
+        422,
+        ['Content-Type' => 'application/json'],
+        new Stream($body),
+        'Unprocessable Entity'
+    );
+    $respErr = ResponseException::fromResponse($resp);
+
+    expect($respErr)->toBeInstanceOf(ResponseException::class);
+    expect($respErr->getMessage())->toBe('Detailed error');
+    expect($respErr->getCode())->toBe(422);
 });
