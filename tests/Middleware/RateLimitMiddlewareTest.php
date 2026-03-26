@@ -1,5 +1,7 @@
 <?php
 
+use Villaflor\Connection\Adapter\Curl;
+use Villaflor\Connection\Auth\AuthInterface;
 use Villaflor\Connection\Http\Response;
 use Villaflor\Connection\Http\Stream;
 use Villaflor\Connection\Middleware\RateLimitMiddleware;
@@ -46,12 +48,12 @@ it('supports different keys for different rate limits', function () {
 });
 
 it('integrates with real HTTP client', function () {
-    $auth = $this->getMockBuilder(Villaflor\Connection\Auth\AuthInterface::class)
+    $auth = $this->getMockBuilder(AuthInterface::class)
         ->onlyMethods(['getHeaders'])
         ->getMock();
     $auth->method('getHeaders')->willReturn([]);
 
-    $client = new Villaflor\Connection\Adapter\Curl($auth, 'https://postman-echo.com');
+    $client = new Curl($auth, 'https://postman-echo.com');
 
     // Add rate limiting middleware - 2 requests per second
     $limiter = new RateLimiter(maxRequests: 2, perSeconds: 1);

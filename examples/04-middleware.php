@@ -2,6 +2,7 @@
 
 require_once __DIR__.'/../vendor/autoload.php';
 
+use Psr\Http\Message\ResponseInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\LogLevel;
 use Villaflor\Connection\Adapter\Curl;
@@ -22,7 +23,7 @@ class TimestampMiddleware implements MiddlewareInterface
         array $data,
         array $headers,
         callable $next
-    ): \Psr\Http\Message\ResponseInterface {
+    ): ResponseInterface {
         // Add timestamp header to all requests
         $headers['X-Request-Timestamp'] = (string) time();
 
@@ -141,7 +142,7 @@ class LogOrderMiddleware implements MiddlewareInterface
         array $data,
         array $headers,
         callable $next
-    ): \Psr\Http\Message\ResponseInterface {
+    ): ResponseInterface {
         echo "{$this->name}: Before request\n";
         $response = $next($method, $uri, $data, $headers);
         echo "{$this->name}: After response\n";
@@ -178,7 +179,7 @@ class DynamicAuthMiddleware implements MiddlewareInterface
         array $data,
         array $headers,
         callable $next
-    ): \Psr\Http\Message\ResponseInterface {
+    ): ResponseInterface {
         // Get fresh token for each request
         $token = ($this->tokenProvider)();
         $headers['Authorization'] = "Bearer $token";

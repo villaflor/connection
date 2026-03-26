@@ -2,6 +2,7 @@
 
 require_once __DIR__.'/../vendor/autoload.php';
 
+use Psr\Http\Message\ResponseInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\LogLevel;
 use Villaflor\Connection\Adapter\Curl;
@@ -192,7 +193,7 @@ class CircuitBreakerMiddleware implements MiddlewareInterface
         array $data,
         array $headers,
         callable $next
-    ): \Psr\Http\Message\ResponseInterface {
+    ): ResponseInterface {
         // Check if circuit should be reset
         if ($this->isOpen && $this->openedAt && (microtime(true) - $this->openedAt) > $this->resetTimeout) {
             echo "[CIRCUIT BREAKER] Attempting to reset circuit\n";
@@ -202,7 +203,7 @@ class CircuitBreakerMiddleware implements MiddlewareInterface
 
         // If circuit is open, fail fast
         if ($this->isOpen) {
-            throw new \Exception('Circuit breaker is OPEN - failing fast to protect downstream service');
+            throw new Exception('Circuit breaker is OPEN - failing fast to protect downstream service');
         }
 
         try {
@@ -215,7 +216,7 @@ class CircuitBreakerMiddleware implements MiddlewareInterface
             }
 
             return $response;
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             $this->failures++;
             echo "[CIRCUIT BREAKER] Failure #{$this->failures}\n";
 
@@ -269,7 +270,7 @@ class CachingMiddleware implements MiddlewareInterface
         array $data,
         array $headers,
         callable $next
-    ): \Psr\Http\Message\ResponseInterface {
+    ): ResponseInterface {
         // Only cache GET requests
         if ($method !== 'GET') {
             return $next($method, $uri, $data, $headers);
@@ -326,7 +327,7 @@ class TransformationMiddleware implements MiddlewareInterface
         array $data,
         array $headers,
         callable $next
-    ): \Psr\Http\Message\ResponseInterface {
+    ): ResponseInterface {
         // Add custom headers to all requests
         $headers['X-App-Version'] = '1.0.0';
         $headers['X-Request-ID'] = uniqid('req_', true);

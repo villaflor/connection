@@ -1,8 +1,15 @@
 <?php
 
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\StreamInterface;
 use Villaflor\Connection\Adapter\Curl;
 use Villaflor\Connection\Auth\AuthInterface;
+use Villaflor\Connection\Exception\ConnectionException;
+use Villaflor\Connection\Exception\InvalidResponseException;
 use Villaflor\Connection\Exception\ResponseException;
+use Villaflor\Connection\Exception\TimeoutException;
+use Villaflor\Connection\Middleware\MiddlewareInterface;
+use Villaflor\Connection\Retry\RetryConfig;
 
 beforeEach(function () {
     $auth = $this->getMockBuilder(AuthInterface::class)
@@ -122,7 +129,7 @@ it('can handle query params with existing query string', function () {
 });
 
 it('can handle invalid URL gracefully', function () {
-    $this->expectException(Villaflor\Connection\Exception\ConnectionException::class);
+    $this->expectException(ConnectionException::class);
     $this->client->get('http://invalid-domain-that-does-not-exist-12345.com');
 });
 
@@ -170,43 +177,43 @@ it('returns null for empty JSON response', function () {
 
 it('throws InvalidResponseException for malformed JSON', function () {
     // Test using mock to avoid external dependency
-    $mockResponse = $this->getMockBuilder(Psr\Http\Message\ResponseInterface::class)->getMock();
-    $mockStream = $this->getMockBuilder(Psr\Http\Message\StreamInterface::class)->getMock();
+    $mockResponse = $this->getMockBuilder(ResponseInterface::class)->getMock();
+    $mockStream = $this->getMockBuilder(StreamInterface::class)->getMock();
 
     $mockStream->method('__toString')->willReturn('not valid json {{{');
     $mockResponse->method('getBody')->willReturn($mockStream);
 
     // Use reflection to test the private decodeJsonResponse method
-    $auth = $this->getMockBuilder(Villaflor\Connection\Auth\AuthInterface::class)
+    $auth = $this->getMockBuilder(AuthInterface::class)
         ->onlyMethods(['getHeaders'])
         ->getMock();
     $auth->method('getHeaders')->willReturn([]);
 
-    $client = new Villaflor\Connection\Adapter\Curl($auth, 'https://example.com');
+    $client = new Curl($auth, 'https://example.com');
 
     $reflection = new ReflectionClass($client);
     $method = $reflection->getMethod('decodeJsonResponse');
     $method->setAccessible(true);
 
-    $this->expectException(Villaflor\Connection\Exception\InvalidResponseException::class);
+    $this->expectException(InvalidResponseException::class);
     $method->invoke($client, $mockResponse);
 });
 
 it('returns null for empty response body in JSON methods', function () {
     // Test using mock to avoid external dependency
-    $mockResponse = $this->getMockBuilder(Psr\Http\Message\ResponseInterface::class)->getMock();
-    $mockStream = $this->getMockBuilder(Psr\Http\Message\StreamInterface::class)->getMock();
+    $mockResponse = $this->getMockBuilder(ResponseInterface::class)->getMock();
+    $mockStream = $this->getMockBuilder(StreamInterface::class)->getMock();
 
     $mockStream->method('__toString')->willReturn('');
     $mockResponse->method('getBody')->willReturn($mockStream);
 
     // Use reflection to test the private decodeJsonResponse method
-    $auth = $this->getMockBuilder(Villaflor\Connection\Auth\AuthInterface::class)
+    $auth = $this->getMockBuilder(AuthInterface::class)
         ->onlyMethods(['getHeaders'])
         ->getMock();
     $auth->method('getHeaders')->willReturn([]);
 
-    $client = new Villaflor\Connection\Adapter\Curl($auth, 'https://example.com');
+    $client = new Curl($auth, 'https://example.com');
 
     $reflection = new ReflectionClass($client);
     $method = $reflection->getMethod('decodeJsonResponse');
@@ -217,25 +224,25 @@ it('returns null for empty response body in JSON methods', function () {
 });
 
 it('throws TimeoutException for operation timeout', function () {
-    $auth = $this->getMockBuilder(Villaflor\Connection\Auth\AuthInterface::class)
+    $auth = $this->getMockBuilder(AuthInterface::class)
         ->onlyMethods(['getHeaders'])
         ->getMock();
     $auth->method('getHeaders')->willReturn([]);
 
-    $client = new Villaflor\Connection\Adapter\Curl($auth, 'http://10.255.255.1');
+    $client = new Curl($auth, 'http://10.255.255.1');
 
     // Set very short timeout
     $client->setTimeout(1);
     $client->setConnectTimeout(1);
 
-    $this->expectException(Villaflor\Connection\Exception\TimeoutException::class);
+    $this->expectException(TimeoutException::class);
 
     // Try to connect to non-routable IP to trigger timeout
     $client->get('/');
 });
 
 it('can set retry config', function () {
-    $retryConfig = new Villaflor\Connection\Retry\RetryConfig(maxAttempts: 3);
+    $retryConfig = new RetryConfig(maxAttempts: 3);
     $this->client->setRetryConfig($retryConfig);
 
     // If no exception is thrown, the setter works
@@ -243,15 +250,15 @@ it('can set retry config', function () {
 });
 
 it('retries request on retryable status code', function () {
-    $auth = $this->getMockBuilder(Villaflor\Connection\Auth\AuthInterface::class)
+    $auth = $this->getMockBuilder(AuthInterface::class)
         ->onlyMethods(['getHeaders'])
         ->getMock();
     $auth->method('getHeaders')->willReturn([]);
 
-    $client = new Villaflor\Connection\Adapter\Curl($auth, 'https://postman-echo.com');
+    $client = new Curl($auth, 'https://postman-echo.com');
 
     // Set retry config with very small delay for fast testing
-    $retryConfig = new Villaflor\Connection\Retry\RetryConfig(
+    $retryConfig = new RetryConfig(
         maxAttempts: 3,
         retryableStatusCodes: [503],
         baseDelay: 1,
@@ -260,20 +267,20 @@ it('retries request on retryable status code', function () {
     $client->setRetryConfig($retryConfig);
 
     // The 503 status will cause retries and eventually throw
-    $this->expectException(Villaflor\Connection\Exception\ResponseException::class);
+    $this->expectException(ResponseException::class);
     $client->get('https://postman-echo.com/status/503');
 });
 
 it('does not retry on non-retryable status code', function () {
-    $auth = $this->getMockBuilder(Villaflor\Connection\Auth\AuthInterface::class)
+    $auth = $this->getMockBuilder(AuthInterface::class)
         ->onlyMethods(['getHeaders'])
         ->getMock();
     $auth->method('getHeaders')->willReturn([]);
 
-    $client = new Villaflor\Connection\Adapter\Curl($auth, 'https://postman-echo.com');
+    $client = new Curl($auth, 'https://postman-echo.com');
 
     // Set retry config with very small delay for fast testing
-    $retryConfig = new Villaflor\Connection\Retry\RetryConfig(
+    $retryConfig = new RetryConfig(
         maxAttempts: 3,
         retryableStatusCodes: [503],  // Only 503 is retryable
         baseDelay: 1,
@@ -282,14 +289,14 @@ it('does not retry on non-retryable status code', function () {
     $client->setRetryConfig($retryConfig);
 
     // The 404 status should not be retried (will fail immediately)
-    $this->expectException(Villaflor\Connection\Exception\ResponseException::class);
+    $this->expectException(ResponseException::class);
     $client->get('https://postman-echo.com/status/404');
 });
 
 it('can add and execute middleware', function () {
     $executed = false;
 
-    $middleware = new class($executed) implements Villaflor\Connection\Middleware\MiddlewareInterface
+    $middleware = new class($executed) implements MiddlewareInterface
     {
         private bool $executed;
 
@@ -298,7 +305,7 @@ it('can add and execute middleware', function () {
             $this->executed = &$executed;
         }
 
-        public function handle(string $method, string $uri, array $data, array $headers, callable $next): Psr\Http\Message\ResponseInterface
+        public function handle(string $method, string $uri, array $data, array $headers, callable $next): ResponseInterface
         {
             $this->executed = true;
 
@@ -316,7 +323,7 @@ it('can add and execute middleware', function () {
 it('executes middleware in order', function () {
     $order = [];
 
-    $middleware1 = new class($order) implements Villaflor\Connection\Middleware\MiddlewareInterface
+    $middleware1 = new class($order) implements MiddlewareInterface
     {
         private array $order;
 
@@ -325,7 +332,7 @@ it('executes middleware in order', function () {
             $this->order = &$order;
         }
 
-        public function handle(string $method, string $uri, array $data, array $headers, callable $next): Psr\Http\Message\ResponseInterface
+        public function handle(string $method, string $uri, array $data, array $headers, callable $next): ResponseInterface
         {
             $this->order[] = 'middleware1-before';
             $response = $next($method, $uri, $data, $headers);
@@ -335,7 +342,7 @@ it('executes middleware in order', function () {
         }
     };
 
-    $middleware2 = new class($order) implements Villaflor\Connection\Middleware\MiddlewareInterface
+    $middleware2 = new class($order) implements MiddlewareInterface
     {
         private array $order;
 
@@ -344,7 +351,7 @@ it('executes middleware in order', function () {
             $this->order = &$order;
         }
 
-        public function handle(string $method, string $uri, array $data, array $headers, callable $next): Psr\Http\Message\ResponseInterface
+        public function handle(string $method, string $uri, array $data, array $headers, callable $next): ResponseInterface
         {
             $this->order[] = 'middleware2-before';
             $response = $next($method, $uri, $data, $headers);
@@ -367,9 +374,9 @@ it('executes middleware in order', function () {
 });
 
 it('middleware can modify request parameters', function () {
-    $middleware = new class implements Villaflor\Connection\Middleware\MiddlewareInterface
+    $middleware = new class implements MiddlewareInterface
     {
-        public function handle(string $method, string $uri, array $data, array $headers, callable $next): Psr\Http\Message\ResponseInterface
+        public function handle(string $method, string $uri, array $data, array $headers, callable $next): ResponseInterface
         {
             // Add a custom header
             $headers['X-Custom-Middleware'] = 'test-value';
@@ -549,12 +556,12 @@ it('can set SSL client certificate without separate key', function () {
 it('can set proxy with authentication', function () {
     // Note: We can't test actual proxy without a real proxy server
     // But we can verify the configuration is applied
-    $auth = $this->getMockBuilder(Villaflor\Connection\Auth\AuthInterface::class)
+    $auth = $this->getMockBuilder(AuthInterface::class)
         ->onlyMethods(['getHeaders'])
         ->getMock();
     $auth->method('getHeaders')->willReturn([]);
 
-    $client = new Villaflor\Connection\Adapter\Curl($auth, 'https://postman-echo.com');
+    $client = new Curl($auth, 'https://postman-echo.com');
     $client->setProxy('http://proxy.example.com:8080', 'user:pass');
 
     // Since we can't actually test with a real proxy, we just verify

@@ -1,5 +1,7 @@
 <?php
 
+use Villaflor\Connection\Adapter\Curl;
+use Villaflor\Connection\Auth\AuthInterface;
 use Villaflor\Connection\Events\EventDispatcher;
 use Villaflor\Connection\Events\RequestFailedEvent;
 use Villaflor\Connection\Events\RequestSendingEvent;
@@ -96,12 +98,12 @@ it('measures request duration accurately', function () {
 });
 
 it('integrates with real HTTP client', function () {
-    $auth = $this->getMockBuilder(Villaflor\Connection\Auth\AuthInterface::class)
+    $auth = $this->getMockBuilder(AuthInterface::class)
         ->onlyMethods(['getHeaders'])
         ->getMock();
     $auth->method('getHeaders')->willReturn([]);
 
-    $client = new Villaflor\Connection\Adapter\Curl($auth, 'https://postman-echo.com');
+    $client = new Curl($auth, 'https://postman-echo.com');
 
     $dispatcher = new EventDispatcher;
     $middleware = new EventMiddleware($dispatcher);
